@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import rikkei.academy.model.User;
 import rikkei.academy.repository.IUserRepository;
 
+import java.util.Optional;
+
 @Service
 public class UserServiceIMPL implements IUserService{
     @Autowired
@@ -23,5 +25,10 @@ public class UserServiceIMPL implements IUserService{
     @Override
     public Boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    @Override
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
 }

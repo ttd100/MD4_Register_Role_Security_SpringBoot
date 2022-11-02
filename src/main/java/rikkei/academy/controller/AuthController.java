@@ -3,19 +3,28 @@ package rikkei.academy.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import rikkei.academy.dto.request.SignInForm;
 import rikkei.academy.dto.request.SignUpForm;
+import rikkei.academy.dto.response.JwtResponse;
 import rikkei.academy.dto.response.ResponseMessage;
 import rikkei.academy.model.Role;
 import rikkei.academy.model.RoleName;
 import rikkei.academy.model.User;
+import rikkei.academy.security.jwt.JwtProvider;
+import rikkei.academy.security.userprincipal.UserPrinciple;
 import rikkei.academy.service.role.IRoleService;
 import rikkei.academy.service.user.IUserService;
 
+import javax.validation.Valid;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,6 +37,10 @@ public class AuthController {
     private IUserService userService;
     @Autowired
     PasswordEncoder passwordEncoder;
+    @Autowired
+    private AuthenticationManager authenticationManager;
+    @Autowired
+    JwtProvider jwtProvider;
     @PostMapping("/signup")
     public ResponseEntity<?> signUp(@RequestBody SignUpForm signUpForm){
         if (userService.existsByUsername(signUpForm.getUsername())){
@@ -56,6 +69,16 @@ public class AuthController {
         User user = new User(signUpForm.getName(),signUpForm.getUsername(),signUpForm.getEmail(),passwordEncoder.encode(signUpForm.getPassword()),roles);
         userService.save(user);
         return new ResponseEntity<>(new ResponseMessage("create_success"),HttpStatus.OK);
-
     }
+    @PostMapping("/signIn")
+    public ResponseEntity<?> signIn(@Valid @RequestBody SignInForm signInForm){
+        Authentication authentication = authenticationManager.authenticate(
+         new UsernamePasswordAuthenticationToken(signInForm.getUsername(),signInForm.getPassword())
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String token = jwtProvider.generateJwtToken(authentication);
+        UserPrinciple userPrinciple = (UserPrinciple) authentication.getPrincipal();
+        return ResponseEntity.ok(new JwtResponse(token,userPrinciple.getName(),userPrinciple.getAuthorities()));
+    }
+
 }
